@@ -29,7 +29,7 @@ func main() {
 	http.ListenAndServe("127.0.0.1:"+port, router)
 }
 
-func createToken(w http.ResponseWriter, r *http.Request) {
+func createToken(w http.ResponseWriter, _ *http.Request) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"iss": "auth-app",
 		"sub": "medium",
@@ -63,7 +63,7 @@ func setupGoGuardian() {
 	authenticator.EnableStrategy(bearer.CachedStrategyKey, tokenStrategy)
 }
 
-func validateUser(ctx context.Context, r *http.Request, userName, password string) (auth.Info, error) {
+func validateUser(_ context.Context, _ *http.Request, userName, password string) (auth.Info, error) {
 	// here connect to db or any other service to fetch user and validate it.
 	if userName == "medium" && password == "medium" {
 		return auth.NewDefaultUser("medium", "1", nil, nil), nil
@@ -73,7 +73,7 @@ func validateUser(ctx context.Context, r *http.Request, userName, password strin
 }
 
 func middleware(next http.Handler) http.HandlerFunc {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
 		log.Println("Executing Auth Middleware")
 		user, err := authenticator.Authenticate(r)
 		if err != nil {
@@ -83,10 +83,10 @@ func middleware(next http.Handler) http.HandlerFunc {
 		}
 		log.Printf("User %s Authenticated\n", user.UserName())
 		next.ServeHTTP(w, r)
-	})
+	}
 }
 
-func verifyToken(ctx context.Context, r *http.Request, tokenString string) (auth.Info, error) {
+func verifyToken(_ context.Context, _ *http.Request, tokenString string) (auth.Info, error) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
